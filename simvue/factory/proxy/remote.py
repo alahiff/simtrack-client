@@ -4,7 +4,7 @@ import typing
 
 from simvue.api import get, post, put
 from simvue.factory.proxy.base import SimvueBaseClass
-from simvue.utilities import get_auth, get_expiry, prepare_for_api, skip_if_failed
+from simvue.utilities import get_auth, get_expiry, prepare_for_api, skip_if_failed, request_headers
 from simvue.version import __version__
 
 logger = logging.getLogger(__name__)
@@ -22,14 +22,9 @@ class Remote(SimvueBaseClass):
         self, name: typing.Optional[str], uniq_id: str, suppress_errors: bool = True
     ) -> None:
         self._url, self._token = get_auth()
+        self._headers = request_headers()
+        self._headers_mp = request_headers(True)
 
-        self._headers: dict[str, str] = {
-            "Authorization": f"Bearer {self._token}",
-            "User-Agent": f"Simvue Python client {__version__}",
-        }
-        self._headers_mp: dict[str, str] = self._headers | {
-            "Content-Type": "application/msgpack"
-        }
         super().__init__(name, uniq_id, suppress_errors)
         self.check_token()
 

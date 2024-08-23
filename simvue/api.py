@@ -140,8 +140,14 @@ def put(
     return response
 
 
+@retry(
+    wait=wait_exponential(multiplier=RETRY_MULTIPLIER, min=RETRY_MIN, max=RETRY_MAX),
+    stop=stop_after_attempt(RETRY_STOP),
+    retry=retry_if_exception_type(RuntimeError),
+    reraise=True,
+)
 def get(
-    url: str, headers: dict[str, str], timeout: int = DEFAULT_API_TIMEOUT
+    url: str, headers: dict[str, str], timeout: int = DEFAULT_API_TIMEOUT, **kwargs
 ) -> requests.Response:
     """HTTP GET
 
@@ -159,7 +165,13 @@ def get(
     requests.Response
         response from executing GET
     """
-    response = requests.get(url, headers=headers, timeout=timeout)
+    response = requests.get(url, headers=headers, timeout=timeout, **kwargs)
+    if response.status_code == 422:
+        print(response.json())
+        _parsed_response = parse_validation_response(response.json())
+        raise ValueError(
+            f"Validation error for '{url}' [{response.status_code}]:\n{_parsed_response}"
+        )
     response.raise_for_status()
 
     return response

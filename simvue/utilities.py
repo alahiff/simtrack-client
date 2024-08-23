@@ -13,6 +13,8 @@ import typing
 
 import jwt
 
+from simvue.version import __version__
+
 CHECKSUM_BLOCK_SIZE = 4096
 EXTRAS: tuple[str, ...] = ("plot", "torch")
 
@@ -356,3 +358,18 @@ def compare_alerts(first, second):
                     return False
 
     return True
+
+
+def request_headers(message_pack: bool=False) -> dict[str, str]:
+    _, _token = get_auth()
+
+    _headers: dict[str, str] = {
+        "Authorization": f"Bearer {_token}",
+        "User-Agent": f"Simvue Python client {__version__}",
+    }
+    _headers_mp: dict[str, str] = _headers | {
+        "Content-Type": "application/msgpack"
+    }
+
+    return _headers_mp if message_pack else _headers
+
