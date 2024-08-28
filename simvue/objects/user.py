@@ -23,21 +23,35 @@ class User(ServerObject):
                 "Failed to retrieve current user information"
             )
         _data = response.json()
-        self._tenant = _data["tenant"]
-        self._username = _data["username"]
+        _user_name = _data.get("username")
 
-        response = sv_api.get(self._url, headers=self._headers, params={"tenant": self._tenant, "search": self._username})
+        response = sv_api.get(f"{self._url}/{_user_name}", headers=self._headers)
 
         if response.status_code != http.HTTPStatus.OK:
             raise RuntimeError(
                 "Failed to retrieve current tenant users"
             )
 
-        if response and (identifier := response[0].get("id")):
+        if response.json() and (identifier := response.json().get("id")):
             return identifier
 
         return None
 
+    @property
+    def tenant(self) -> str:
+        return self._retrieve_attribute("tenant").get("name")
 
-if __name__ in "__main__":
-    print(User().id)
+    @property
+    def email(self) -> str:
+        return self._retrieve_attribute("email")
+
+    @property
+    def full_name(self) -> str:
+        return self._retrieve_attribute("fullname")
+
+    def __repr__(self) -> str:
+        return f"simvue.User({self._identifier}, fullname={self.full_name}, email={self.email}, tenant={self.tenant})"
+
+    def __str__(self) -> str:
+        return self.__repr__()
+

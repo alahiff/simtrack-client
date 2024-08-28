@@ -93,6 +93,6 @@ class Folder(ServerObject):
             )
         self._set_attribute("ttl", retention_secs)
 
+    def __repr__(self) -> str:
+        return f"simvue.Folder({self._identifier}, path={self.path}, tags={self.tags}, retention_period={self.retention_period})"
 
-if __name__ in "__main__":
-    print(Folder("/test_folder").retention_period)

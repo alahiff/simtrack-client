@@ -62,11 +62,5 @@ class Tag(ServerObject):
         return self.__repr__()
 
     def __repr__(self) -> str:
-        return f"simvue.Tag('{self._name}', color={self.color}, description={self.description})"
-
-
-if __name__ in "__main__":
-    tag = Tag("test_tag")
-    tag.color = "red"
-    print(requests.get("https://test.simvue.io/api/whoami", headers=tag._headers).json())
+        return f"simvue.Tag({self._identifier}, name={self._name}, color={self.color}, description={self.description})"
 
