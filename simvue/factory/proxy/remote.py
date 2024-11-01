@@ -142,11 +142,18 @@ class Remote(SimvueBaseClass):
 
         logger.debug('Updating run with data: "%s"', data)
 
-        try:
-            response = put(f"{self._config.server.url}/api/runs", self._headers, data)
-        except Exception as err:
-            self._error(f"Exception updating run: {err}")
-            return None
+        retry = True
+        while retry:
+            retry = False
+            try:
+                response = put(f"{self._config.server.url}/api/runs", self._headers, data)
+            except Exception as err:
+                if "409" in f"{err}":
+                    print(f"Ignoring exception updating run as 409: {err}")
+                    retry = True
+                else:
+                    self._error(f"Exception updating run: {err}")
+                    return None
 
         logger.debug(
             'Got status code %d when updating run, with response: "%s"',
