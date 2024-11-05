@@ -45,7 +45,7 @@ class SimvueBaseClass(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def set_folder_details(self, data) -> typing.Optional[dict[str, typing.Any]]:
+    def set_folder_details(self, path, data) -> typing.Optional[dict[str, typing.Any]]:
         pass
 
     @abc.abstractmethod

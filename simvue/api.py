@@ -171,7 +171,10 @@ def put(
     reraise=True,
 )
 def get(
-    url: str, headers: dict[str, str], timeout: int = DEFAULT_API_TIMEOUT
+    url: str,
+    headers: dict[str, str],
+    params: typing.Optional[dict[str, typing.Any]] = None,
+    timeout: int = DEFAULT_API_TIMEOUT,
 ) -> requests.Response:
     """HTTP GET
 
@@ -181,6 +184,8 @@ def get(
         URL to put to
     headers : dict[str, str]
         headers for the post request
+    params : dict[str, Any], optional
+        parameters to send in request
     timeout : int, optional
         timeout of request, by default DEFAULT_API_TIMEOUT
 
@@ -189,7 +194,7 @@ def get(
     requests.Response
         response from executing GET
     """
-    response = requests.get(url, headers=headers, timeout=timeout)
+    response = requests.get(url, headers=headers, timeout=timeout, params=params)
     response.raise_for_status()
 
     return response

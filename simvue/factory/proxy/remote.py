@@ -7,7 +7,7 @@ if typing.TYPE_CHECKING:
 
 from simvue.api import get, post, put
 from simvue.factory.proxy.base import SimvueBaseClass
-from simvue.utilities import prepare_for_api, skip_if_failed
+from simvue.utilities import prepare_for_api, skip_if_failed, parse_validation_response
 from simvue.version import __version__
 
 logger = logging.getLogger(__name__)
@@ -71,34 +71,39 @@ class Remote(SimvueBaseClass):
 
         return []
 
+    def _create_folder(self, path: str) -> typing.Optional[str]:
+        try:
+            response = post(
+                f"{self._config.server.url}/api/folders",
+                self._headers,
+                {"path": path},
+            )
+        except Exception as err:
+            self._error(f"Exception creating folder: {str(err)}")
+            return None
+
+        logger.debug(
+            'Got status code %d when creating folder, with response: "%s"',
+            response.status_code,
+            response.text,
+        )
+
+        if response.status_code not in (
+            http.HTTPStatus.OK,
+            http.HTTPStatus.CONFLICT,
+        ):
+            self._error(f"Unable to create folder {path}")
+            return None
+        return response.json().get("id")
+
     @skip_if_failed("_aborted", "_suppress_errors", (None, None))
     def create_run(self, data) -> tuple[typing.Optional[str], typing.Optional[int]]:
         """
         Create a run
         """
-        if data.get("folder") != "/":
+        if (path := data.get("folder")) != "/":
             logger.debug("Creating folder %s if necessary", data.get("folder"))
-            try:
-                response = post(
-                    f"{self._config.server.url}/api/folders",
-                    self._headers,
-                    {"path": data.get("folder")},
-                )
-            except Exception as err:
-                self._error(f"Exception creating folder: {str(err)}")
-                return (None, None)
-
-            logger.debug(
-                'Got status code %d when creating folder, with response: "%s"',
-                response.status_code,
-                response.text,
-            )
-
-            if response.status_code not in (
-                http.HTTPStatus.OK,
-                http.HTTPStatus.CONFLICT,
-            ):
-                self._error(f"Unable to create folder {data.get('folder')}")
+            if not self._create_folder(path):
                 return (None, None)
 
         logger.debug('Creating run with data: "%s"', data)
@@ -137,15 +142,22 @@ class Remote(SimvueBaseClass):
         """
         Update metadata, tags or status
         """
-        if self._id:
-            data["id"] = self._id
 
         logger.debug('Updating run with data: "%s"', data)
 
+        if not self._id:
+            self._error("Failed to retrieve an identifier for the current run")
+            return None
+
         try:
-            response = put(f"{self._config.server.url}/api/runs", self._headers, data)
+            response = put(
+                f"{self._config.server.url}/api/runs/{self._id}", self._headers, data
+            )
         except Exception as err:
-            self._error(f"Exception updating run: {err}")
+            if response.status_code == http.HTTPStatus.UNPROCESSABLE_ENTITY:
+                self._error(parse_validation_response(response))
+            else:
+                self._error(f"Exception updating run: {err}")
             return None
 
         logger.debug(
@@ -162,36 +174,36 @@ class Remote(SimvueBaseClass):
 
     @skip_if_failed("_aborted", "_suppress_errors", None)
     def set_folder_details(
-        self, data, run=None
+        self, path: str, data: dict[str, typing.Any]
     ) -> typing.Optional[dict[str, typing.Any]]:
         """
         Set folder details
         """
-        if run is not None and not __version__:
-            data["name"] = run
-
         try:
-            response = post(
-                f"{self._config.server.url}/api/folders", self._headers, data
+            response = get(
+                f"{self._config.server.url}/api/folders",
+                headers=self._headers,
+                params={"folder": path},
             )
         except Exception as err:
-            self._error(f"Exception creating folder: {err}")
+            self._error(f"Failed to retrieve folder matching path '{path}': {err}")
             return None
 
-        if response.status_code in (http.HTTPStatus.OK, http.HTTPStatus.CONFLICT):
-            folder_id = response.json()["id"]
-            data["id"] = folder_id
+        if response.status_code != http.HTTPStatus.OK or not (
+            data := response.json().get("data")
+        ):
+            self._error(f"Failed to retrieve folder matching path '{path}'")
+            return None
 
-            if response.status_code == http.HTTPStatus.OK:
-                logger.debug('Got id of new folder: "%s"', folder_id)
-            else:
-                logger.debug('Got id of existing folder: "%s"', folder_id)
+        folder_id = data[0]["id"]
 
         logger.debug('Setting folder details with data: "%s"', data)
 
         try:
             response = put(
-                f"{self._config.server.url}/api/folders", self._headers, data
+                f"{self._config.server.url}/api/folders/{folder_id}",
+                self._headers,
+                data,
             )
         except Exception as err:
             self._error(f"Exception setting folder details: {err}")
@@ -358,15 +370,17 @@ class Remote(SimvueBaseClass):
 
     @skip_if_failed("_aborted", "_suppress_errors", {})
     def set_alert_state(
-        self, alert_id, status
+        self, alert_id: str, status: typing.Literal["completed", "failed", "terminated"]
     ) -> typing.Optional[dict[str, typing.Any]]:
         """
         Set alert state
         """
-        data = {"run": self._id, "alert": alert_id, "status": status}
+        data = {"status": status}
         try:
             response = put(
-                f"{self._config.server.url}/api/alerts/status", self._headers, data
+                f"{self._config.server.url}/api/alerts/status/{alert_id}",
+                self._headers,
+                data,
             )
         except Exception as err:
             self._error(f"Got exception when setting alert state: {err}")

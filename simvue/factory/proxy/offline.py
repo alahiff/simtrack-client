@@ -127,12 +127,18 @@ class Offline(SimvueBaseClass):
         return data
 
     @skip_if_failed("_aborted", "_suppress_errors", None)
-    def set_folder_details(self, data) -> typing.Optional[dict[str, typing.Any]]:
+    def set_folder_details(
+        self, path: str, data: dict[str, typing.Any]
+    ) -> typing.Optional[dict[str, typing.Any]]:
         """
         Set folder details
         """
         unique_id = time.time()
         filename = f"{self._directory}/folder-{unique_id}.json"
+
+        # Store the path in the JSON data for retrieval later
+        data["path"] = path
+
         self._write_json(filename, data)
         return data
 

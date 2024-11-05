@@ -277,7 +277,9 @@ def process(run) -> typing.Optional[str]:
         # Handle folders
         if "/folder-" in record:
             logger.info("Sending folder details for run %s", run_init["name"])
-            if remote.set_folder_details(get_json(record, run_id)):
+            _data = get_json(record, run_id)
+            _path = _data.pop("path")
+            if remote.set_folder_details(_path, _data):
                 rename = True
 
         # Handle alerts

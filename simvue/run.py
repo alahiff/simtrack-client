@@ -1632,7 +1632,7 @@ class Run:
             self._error("Run is not active")
             return False
 
-        data: dict[str, typing.Any] = {"path": path}
+        data: dict[str, typing.Any] = {}
 
         if metadata:
             data["metadata"] = metadata or {}
@@ -1644,7 +1644,7 @@ class Run:
             data["description"] = description
 
         try:
-            if self._simvue.set_folder_details(data):
+            if self._simvue.set_folder_details(path, data):
                 return True
         except RuntimeError as e:
             self._error(f"{e.args[0]}")
