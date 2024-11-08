@@ -1,7 +1,9 @@
 # <Title of Bug Fix>
 
 **Issue:** Link to the issue relating to this bug.
+
 **Python Version(s) Tested:** Python versions this fix has been verified against.
+
 **Operating System(s):** Operating systems this fix has been tested in.
 
 ## 📝 Summary

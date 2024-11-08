@@ -1,4 +1,8 @@
+from logging import critical
+from numpy import tri
 import pytest
+import uuid
+import random
 import os.path
 import typing
 import glob
@@ -21,14 +25,19 @@ def test_get_events(create_test_run: tuple[sv_run.Run, dict]) -> None:
     "from_run", (True, False)
 )
 def test_get_alerts(create_test_run: tuple[sv_run.Run, dict], from_run: bool) -> None:
+    time.sleep(1.0)
     client = svc.Client()
-
+    _, run_data = create_test_run
     if from_run:
-        assert (
-            len(client.get_alerts(run_id=create_test_run[1]["run_id"], critical_only=False)) == 5
-        )
+        triggered_alerts_full = client.get_alerts(run_id=create_test_run[1]["run_id"], critical_only=False, names_only=False)
+        assert len(triggered_alerts_full) == 7
+        for alert in triggered_alerts_full:
+            if alert["alert"].get("name") == "value_above_1":
+                assert alert["alert"]["status"]["current"] == "critical"
     else:
-        assert client.get_alerts(names_only=True)
+        assert (triggered_alerts_full := client.get_alerts(names_only=True, critical_only=False))
+        print(triggered_alerts_full, run_data["created_alerts"])
+        assert all(a in triggered_alerts_full for a in run_data['created_alerts'])
 
 
 @pytest.mark.dependency
@@ -164,6 +173,16 @@ def test_get_metrics_names(create_test_run: tuple[sv_run.Run, dict]) -> None:
     assert client.get_metrics_names(create_test_run[1]["run_id"])
 
 
+
+@pytest.mark.dependency
+@pytest.mark.client
+def test_get_tag(create_plain_run: tuple[sv_run.Run, dict]) -> None:
+    _, run_data = create_plain_run
+    client = svc.Client()
+    time.sleep(1.0)
+    assert any(tag["name"] == run_data["tags"][-1] for tag in client.get_tags())
+
+
 PRE_DELETION_TESTS: list[str] = [
     "test_get_metrics",
     "test_get_runs",
@@ -176,6 +195,7 @@ PRE_DELETION_TESTS: list[str] = [
     "test_plot_metrics",
     "test_get_run_id_from_name",
     "test_get_folder",
+    "test_get_tags"
 ]
 
 
@@ -198,6 +218,18 @@ def test_runs_deletion(create_test_run: tuple[sv_run.Run, dict]) -> None:
 
 
 @pytest.mark.dependency
+@pytest.mark.client(depends=PRE_DELETION_TESTS)
+def test_get_tags(create_plain_run: tuple[sv_run.Run, dict]) -> None:
+    run, run_data = create_plain_run
+    tags = run_data["tags"]
+    run.close()
+    time.sleep(1.0)
+    client = svc.Client()
+    retrieved = [t["name"] for t in client.get_tags()]
+    assert all(t in retrieved for t in tags)
+
+
+@pytest.mark.dependency
 @pytest.mark.client(depends=PRE_DELETION_TESTS + ["test_runs_deletion"])
 def test_folder_deletion(create_test_run: tuple[sv_run.Run, dict]) -> None:
     run, run_data = create_test_run
@@ -205,6 +237,37 @@ def test_folder_deletion(create_test_run: tuple[sv_run.Run, dict]) -> None:
     client = svc.Client()
     # This test is called last, one run created so expect length 1
     assert len(client.delete_folder(run_data["folder"], remove_runs=True)) == 1
+    assert not client.get_folder(run_data["folder"])
+
+
+@pytest.mark.client
+def test_run_folder_metadata_find(create_plain_run: tuple[sv_run.Run, dict]) -> None:
+    run, run_data = create_plain_run
+    rand_val = random.randint(0, 1000)
+    run.set_folder_details(path=run_data["folder"], metadata={'atest': rand_val})
+    run.close()
+    time.sleep(1.0)
+    client = svc.Client()
+    data = client.get_folders(filters=[f'metadata.atest == {rand_val}'])
+
+    assert run_data["folder"] in [i["path"] for i in data]
+
+
+@pytest.mark.client
+def test_tag_deletion(create_plain_run: tuple[sv_run.Run, dict]) -> None:
+    run, run_data = create_plain_run
+    unique_id = f"{uuid.uuid4()}".split("-")[0]
+    run.update_tags([f"delete_me_{unique_id}"])
+    run.close()
+    time.sleep(1.0)
+    client = svc.Client()
+    tags = client.get_tags()
+    client.delete_run(run.id)
+    time.sleep(1.0)
+    tag_identifier = [tag["id"] for tag in tags if tag["name"] == f"delete_me_{unique_id}"][0]
+    client.delete_tag(tag_identifier)
+    time.sleep(1.0)
+    assert not client.get_tag(tag_identifier)
 
 
 @pytest.mark.dependency

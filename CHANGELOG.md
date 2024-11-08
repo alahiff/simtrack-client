@@ -2,8 +2,13 @@
 
 ## Unreleased
 
+* Add support for defining Simvue run defaults using `tool.simvue` in a project `pyproject.toml` file.
 * Drop support for INI based configuration files.
+* Retrieve all metric values if `max_points` is unspecified or set to `None`.
 
+## [v1.1.2](https://github.com/simvue-io/client/releases/tag/v1.1.2) - 2024-11-06
+
+* Fix bug in offline mode directory retrieval.
 ## [v1.1.1](https://github.com/simvue-io/client/releases/tag/v1.1.1) - 2024-10-22
 
 * Add missing `offline.cache` key to TOML config.

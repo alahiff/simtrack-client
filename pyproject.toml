@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "simvue"
-version = "1.1.1"
+version = "1.1.2"
 description = "Simulation tracking and monitoring"
 authors = ["Simvue Development Team <info@simvue.io>"]
 license = "Apache v2"
@@ -66,7 +66,7 @@ simvue_sender = "simvue.bin.sender:run"
 pytest = "^8.0.0"
 pytest-dependency = "^0.6.0"
 ruff = ">=0.5.0,<0.8.0"
-pytest-cov = ">=4.1,<6.0"
+pytest-cov = ">=4.1,<7.0"
 pytest-mock = "^3.14.0"
 pytest-sugar = "^1.0.0"
 pytest-xdist = "^3.6.1"

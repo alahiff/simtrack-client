@@ -28,10 +28,10 @@ class Remote(SimvueBaseClass):
         config: "SimvueConfiguration",
         suppress_errors: bool = True,
     ) -> None:
-        self._config = config
+        self._user_config = config
 
         self._headers: dict[str, str] = {
-            "Authorization": f"Bearer {self._config.server.token}",
+            "Authorization": f"Bearer {self._user_config.server.token}",
             "User-Agent": f"Simvue Python client {__version__}",
         }
         self._headers_mp: dict[str, str] = self._headers | {
@@ -46,7 +46,7 @@ class Remote(SimvueBaseClass):
         logger.debug("Retrieving existing tags")
         try:
             response = get(
-                f"{self._config.server.url}/api/runs/{self._id}", self._headers
+                f"{self._user_config.server.url}/api/runs/{self._id}", self._headers
             )
         except Exception as err:
             self._error(f"Exception retrieving tags: {str(err)}")
@@ -109,7 +109,9 @@ class Remote(SimvueBaseClass):
         logger.debug('Creating run with data: "%s"', data)
 
         try:
-            response = post(f"{self._config.server.url}/api/runs", self._headers, data)
+            response = post(
+                f"{self._user_config.server.url}/api/runs", self._headers, data
+            )
         except Exception as err:
             self._error(f"Exception creating run: {str(err)}")
             return (None, None)
@@ -151,7 +153,9 @@ class Remote(SimvueBaseClass):
 
         try:
             response = put(
-                f"{self._config.server.url}/api/runs/{self._id}", self._headers, data
+                f"{self._user_config.server.url}/api/runs/{self._id}",
+                self._headers,
+                data,
             )
         except Exception as err:
             if response.status_code == http.HTTPStatus.UNPROCESSABLE_ENTITY:
@@ -181,7 +185,7 @@ class Remote(SimvueBaseClass):
         """
         try:
             response = get(
-                f"{self._config.server.url}/api/folders",
+                f"{self._user_config.server.url}/api/folders",
                 headers=self._headers,
                 params={"folder": path},
             )
@@ -201,7 +205,7 @@ class Remote(SimvueBaseClass):
 
         try:
             response = put(
-                f"{self._config.server.url}/api/folders/{folder_id}",
+                f"{self._user_config.server.url}/api/folders/{folder_id}",
                 self._headers,
                 data,
             )
@@ -235,7 +239,7 @@ class Remote(SimvueBaseClass):
         # Get presigned URL
         try:
             response = post(
-                f"{self._config.server.url}/api/artifacts",
+                f"{self._user_config.server.url}/api/artifacts",
                 self._headers,
                 prepare_for_api(data),
             )
@@ -319,7 +323,7 @@ class Remote(SimvueBaseClass):
                     return None
 
         if storage_id:
-            path = f"{self._config.server.url}/api/runs/{self._id}/artifacts"
+            path = f"{self._user_config.server.url}/api/runs/{self._id}/artifacts"
             data["storage"] = storage_id
 
             try:
@@ -350,7 +354,7 @@ class Remote(SimvueBaseClass):
 
         try:
             response = post(
-                f"{self._config.server.url}/api/alerts", self._headers, data
+                f"{self._user_config.server.url}/api/alerts", self._headers, data
             )
         except Exception as err:
             self._error(f"Got exception when creating an alert: {str(err)}")
@@ -378,7 +382,7 @@ class Remote(SimvueBaseClass):
         data = {"status": status}
         try:
             response = put(
-                f"{self._config.server.url}/api/alerts/status/{alert_id}",
+                f"{self._user_config.server.url}/api/alerts/status/{alert_id}",
                 self._headers,
                 data,
             )
@@ -397,7 +401,7 @@ class Remote(SimvueBaseClass):
         List alerts
         """
         try:
-            response = get(f"{self._config.server.url}/api/alerts", self._headers)
+            response = get(f"{self._user_config.server.url}/api/alerts", self._headers)
         except Exception as err:
             self._error(f"Got exception when listing alerts: {str(err)}")
             return []
@@ -426,7 +430,7 @@ class Remote(SimvueBaseClass):
 
         try:
             response = post(
-                f"{self._config.server.url}/api/metrics",
+                f"{self._user_config.server.url}/api/metrics",
                 self._headers_mp,
                 data,
                 is_json=False,
@@ -454,7 +458,7 @@ class Remote(SimvueBaseClass):
 
         try:
             response = post(
-                f"{self._config.server.url}/api/events",
+                f"{self._user_config.server.url}/api/events",
                 self._headers_mp,
                 data,
                 is_json=False,
@@ -480,7 +484,7 @@ class Remote(SimvueBaseClass):
 
         try:
             response = put(
-                f"{self._config.server.url}/api/runs/heartbeat",
+                f"{self._user_config.server.url}/api/runs/heartbeat",
                 self._headers,
                 {"id": self._id},
             )
@@ -502,7 +506,8 @@ class Remote(SimvueBaseClass):
 
         try:
             response = get(
-                f"{self._config.server.url}/api/runs/{self._id}/abort", self._headers_mp
+                f"{self._user_config.server.url}/api/runs/{self._id}/abort",
+                self._headers_mp,
             )
         except Exception as err:
             self._error(f"Exception retrieving abort status: {str(err)}")
