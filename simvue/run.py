@@ -39,7 +39,7 @@ from .factory.dispatch import Dispatcher
 from .executor import Executor
 from .factory.proxy import Simvue
 from .metrics import get_gpu_metrics, get_process_cpu, get_process_memory
-from .models import RunInput, FOLDER_REGEX, NAME_REGEX, MetricKeyString
+from .models import RunInput, AlertValidator, FOLDER_REGEX, NAME_REGEX, MetricKeyString
 from .serialization import serialize_object
 from .system import get_system
 from .metadata import git_info, environment
@@ -1812,18 +1812,6 @@ class Run:
             self._error("Cannot add alert, run not initialised")
             return None
 
-        if rule in ("is below", "is above") and threshold is None:
-            self._error("threshold must be defined for the specified alert type")
-            return None
-
-        if rule in ("is outside range", "is inside range") and (
-            range_low is None or range_high is None
-        ):
-            self._error(
-                "range_low and range_high must be defined for the specified alert type"
-            )
-            return None
-
         alert_definition = {}
 
         if source == "metrics":
@@ -1851,6 +1839,17 @@ class Run:
             "description": description,
             "abort": trigger_abort,
         }
+
+        try:
+            to_validate = alert
+            to_validate["trigger_abort"] = to_validate.pop("abort")
+            if definition := to_validate.pop("alert", None):
+                to_validate = {**to_validate, **definition}
+            AlertValidator(**to_validate)
+
+        except ValidationError as err:
+            self._error(f"{err}")
+            return None
 
         # Check if the alert already exists
         alert_id: typing.Optional[str] = None
